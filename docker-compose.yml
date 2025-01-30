@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  mattermost:
+    build: .
+    container_name: mattermost
+    ports:
+      - "8065:8065" # Remove 127.0.0.1 if exposing externally
+    volumes:
+      - ./volumes/mattermost/data:/mattermost/data
+      - ./volumes/mattermost/logs:/mattermost/logs
+      - ./volumes/mattermost/config:/mattermost/config
+    environment:
+      - MM_SQLSETTINGS_DRIVERNAME=postgres
+      - MM_SQLSETTINGS_DATASOURCE=postgres://${POSTGRES_ROOT_USER}:${POSTGRES_ROOT_PASSWORD}@db:5432/${POSTGRES_DB_MATTERMOST}?sslmode=disable
+      - MM_ADMIN_USERNAME=${MM_ADMIN_USERNAME}
+      - MM_ADMIN_PASSWORD=${MM_ADMIN_PASSWORD}
