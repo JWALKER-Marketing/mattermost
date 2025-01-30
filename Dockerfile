@@ -5,14 +5,14 @@ FROM golang:1.20 AS builder
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs
 
-# Build Mattermost **Webapp** first
-WORKDIR /mattermost-webapp
-COPY mattermost-webapp/ .
+# Build Webapp
+WORKDIR /webapp
+COPY ./webapp .
 RUN npm ci --no-optional --force && npm run build
 
-# Build Mattermost **Server**
+# Build Server
 WORKDIR /go/src/github.com/mattermost/mattermost-server
-COPY . .
+COPY ./server .
 RUN make build-linux  # Use the correct target for Linux builds
 
 # Stage 2: Final image
@@ -22,7 +22,7 @@ WORKDIR /mattermost
 
 # Copy server binary and webapp assets
 COPY --from=builder /go/src/github.com/mattermost/mattermost-server/bin/mattermost /mattermost/bin/mattermost
-COPY --from=builder /mattermost-webapp/dist /mattermost/client
+COPY --from=builder /webapp/dist /mattermost/client
 
 EXPOSE 8065
 ENTRYPOINT ["/mattermost/bin/mattermost"]
