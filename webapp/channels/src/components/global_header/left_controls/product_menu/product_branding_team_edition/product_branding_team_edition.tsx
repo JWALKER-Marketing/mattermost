@@ -44,6 +44,13 @@ const ProductBrandingTeamEdition = (): JSX.Element => {
                 height={20}
             />
             <Badge>{'FREE EDITION'}</Badge>
+        {/* <ProductBrandingTeamEditionContainer tabIndex={0}>
+        <Badge
+            width={116}
+            height={20}
+        >
+            The Club Of Names
+        </Badge> */}
         </ProductBrandingTeamEditionContainer>
     );
 };
