@@ -177,6 +177,32 @@ const getDefaultTheme = createSelector('getDefaultTheme', getConfig, (config): T
         }
     }
 
+    return {
+        "sidebarBg": "#1a1a1a",
+        "sidebarText": "#ffffff",
+        "sidebarUnreadText": "#FFBC1F",
+        "sidebarTextHoverBg": "#2d2d2d",
+        "sidebarTextActiveBorder": "#FFBC1F",
+        "sidebarTextActiveColor": "#FFBC1F",
+        "sidebarHeaderBg": "#000000",
+        "sidebarTeamBarBg": "#121212",
+        "sidebarHeaderTextColor": "#FFBC1F",
+        "onlineIndicator": "#00c853",
+        "awayIndicator": "#ffaa00",
+        "dndIndicator": "#ff3b30",
+        "mentionBg": "#FFBC1F",
+        "mentionColor": "#1a1a1a",
+        "centerChannelBg": "#ffffff",
+        "centerChannelColor": "#2d2d2d",
+        "newMessageSeparator": "#FFBC1F",
+        "linkColor": "#1e4d8c",
+        "buttonBg": "#1a1a1a",
+        "buttonColor": "#FFBC1F",
+        "errorTextColor": "#ff3b30",
+        "mentionHighlightBg": "#FFE5B2",
+        "mentionHighlightLink": "#1a1a1a",
+        "codeTheme": "github"
+      }
     // If no config.DefaultTheme or value doesn't refer to a valid theme name...
     return Preferences.THEMES.denim;
 });

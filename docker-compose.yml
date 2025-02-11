@@ -5,7 +5,7 @@ services:
     build: .
     container_name: mattermost
     ports:
-      - "8065:8065" # Remove 127.0.0.1 if exposing externally
+      - "127.0.0.1:8065:8065" # Remove 127.0.0.1 if exposing externally
     volumes:
       - ./volumes/mattermost/data:/mattermost/data
       - ./volumes/mattermost/logs:/mattermost/logs
