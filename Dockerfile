@@ -1,58 +1,38 @@
-# Stage 1: Build the server and webapp
-FROM golang:1.22 AS builder 
-# Устанавливаем системные зависимости
+# Stage 1: Build Mattermost Server
+FROM golang:1.22 AS server-builder
+
+# Install required build dependencies
 RUN apt-get update && apt-get install -y \
-    autoconf \
-    automake \
-    g++ \
-    libpng-dev \
-    make \
-    nasm \
-    git
+    unzip \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-# Устанавливаем Node.js 18.x
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-    && apt-get install -y nodejs
+WORKDIR /server
 
-# Stage 1a: Собираем веб-приложение
-WORKDIR /webapp
-COPY ./webapp .
+# Copy server source
+COPY ./server/. .
 
-RUN npm install --force \
-    imagemin-svgo@latest \
-    svgo@latest \
-    image-webpack-loader@latest \
-    && npm ci --force \
-    && npm run build
-
-# Stage 1b: Собираем серверную часть
-WORKDIR /go/src/github.com/mattermost/mattermost-server
-COPY ./server .
-
-# Исправляем версию Go в go.mod (если требуется)
-RUN sed -i 's/go 1.22.0/go 1.22/' go.mod && \
-    sed -i '/toolchain/d' go.mod  # Удаляем строку с toolchain
-
+# Build server binaries
 RUN make build-linux
 
+# Stage 2: Build Webapp
+FROM node:18 AS webapp-builder
 
-# Stage 2: Финальный образ
-FROM alpine:3.17
+WORKDIR /webapp
 
-# Устанавливаем runtime-зависимости
-RUN apk add --no-cache \
-    ca-certificates \
-    tzdata \
-    libgcc \
-    libstdc++
+# Copy webapp source
+COPY ./webapp .
 
-WORKDIR /mattermost
+# Install dependencies and build
+RUN npm ci
+RUN npm run build
 
-# Копируем собранные артефакты
-COPY --from=builder /go/src/github.com/mattermost/mattermost-server/bin/mattermost /mattermost/bin/
-COPY --from=builder /webapp/dist /mattermost/client/
+# Stage 3: Final Image
+FROM mattermost/mattermost-team-edition:9.11.5
 
-# Настройки среды
-EXPOSE 8065
+# Copy built artifacts
+COPY --from=server-builder /server/dist/mattermost /mattermost/bin/
+COPY --from=webapp-builder /webapp/dist /mattermost/client/
+
+# Preserve original entrypoint and cmd
 ENTRYPOINT ["/mattermost/bin/mattermost"]
-CMD ["server"]

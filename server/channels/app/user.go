@@ -187,6 +187,15 @@ func (a *App) CreateUserAsAdmin(c request.CTX, user *model.User, redirect string
 	return ruser, nil
 }
 
+
+func capitalize(s string) string {
+	if len(s) == 0 {
+			return s
+	}
+	return strings.ToUpper(s[0:1]) + strings.ToLower(s[1:])
+}
+
+
 func (a *App) CreateUserFromSignup(c request.CTX, user *model.User, redirect string) (*model.User, *model.AppError) {
 	if err := a.IsUserSignUpAllowed(); err != nil {
 		return nil, err
@@ -251,6 +260,59 @@ func (a *App) createUserOrGuest(c request.CTX, user *model.User, guest bool) (*m
 	}
 
 	ruser, nErr := a.ch.srv.userService.CreateUser(c, user, users.UserCreateOptions{Guest: guest})
+
+	// After user creation:
+	if !guest && user.FirstName != "" {
+		firstName := strings.TrimSpace(user.FirstName)
+		teamName := "club-of-" + strings.ToLower(strings.ReplaceAll(firstName, " ", "-"))
+		teamDisplayName := "Club of " + capitalize(firstName)
+
+		// Get system admin to bypass permission checks
+		sysAdminUsers, appErr := a.GetUsersFromProfiles(&model.UserGetOptions{
+				Page:     0,
+				PerPage:  1,
+				Role:     model.SystemAdminRoleId,
+		})
+		if appErr != nil || len(sysAdminUsers) == 0 {
+				c.Logger().Error("Failed to get system admin for team creation", mlog.Err(appErr))
+				return ruser, nil
+		}
+		sysAdmin := sysAdminUsers[0]
+
+		// Create context with system admin session
+		sysAdminContext := request.EmptyContext(a.Log())
+		sysAdminContext.SetSession(&model.Session{
+				UserId: sysAdmin.Id,
+				Roles:  sysAdmin.Roles,
+		})
+
+		// Check if team exists
+		existingTeam, appErr := a.GetTeamByName(teamName)
+		if appErr != nil {
+				// Create new team
+				team := &model.Team{
+						Name:        teamName,
+						DisplayName: teamDisplayName,
+						Type:        model.TeamOpen,
+				}
+				createdTeam, createErr := a.CreateTeam(sysAdminContext, team)
+				if createErr != nil {
+						c.Logger().Error("Failed to create team", mlog.String("user_id", user.Id), mlog.Err(createErr))
+				} else {
+						// Add user to the new team
+						_, addErr := a.AddTeamMember(sysAdminContext, createdTeam.Id, user.Id)
+						if addErr != nil {
+								c.Logger().Error("Failed to add user to team", mlog.String("user_id", user.Id), mlog.String("team_id", createdTeam.Id), mlog.Err(addErr))
+						}
+				}
+		} else {
+				// Add user to existing team
+				_, addErr := a.AddTeamMember(sysAdminContext, existingTeam.Id, user.Id)
+				if addErr != nil {
+						c.Logger().Error("Failed to add user to existing team", mlog.String("user_id", user.Id), mlog.String("team_id", existingTeam.Id), mlog.Err(addErr))
+				}
+		}
+	}
 	if nErr != nil {
 		var appErr *model.AppError
 		var invErr *store.ErrInvalidInput
